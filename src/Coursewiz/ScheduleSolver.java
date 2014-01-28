@@ -32,6 +32,19 @@ public class ScheduleSolver {
 		public void setAmount(int newAmount) {
 			amount = newAmount;
 		}
+	
+		/**
+		 * Removes the newest course from this group.
+		 * @return true if there are courses left after removal,
+		 *		   false if none
+		 */
+		public boolean removeNewestCourse() {
+			if (courses.size() > 0) {
+				courses.remove(courses.size() - 1);
+				return courses.size() > 0;
+			}
+			return false;
+		}
 	}
 	
 	List<CourseGroup> courseGroups = new ArrayList<CourseGroup>();
@@ -70,29 +83,49 @@ public class ScheduleSolver {
 		// TODO obviously, we need to update this
 		CourseGroup theGroup = courseGroups.get(0);
 		
-		// Create a choice node for every course in the group and add the appropriate classes to it
-		List<ChoiceNode> nodes = new ArrayList<ChoiceNode>();
-		ChoiceNode previousNode = null;
-		for (Course thisCourse : theGroup.courses) {
-			// Create the new node
-			ChoiceNode newNode = new ChoiceNode();
-			newNode.setAmount(1);	// choose one class
-			newNode.addChoices(thisCourse.classes);
-			
-			// Add it to our list
-			nodes.add(newNode);
-			
-			// Link the previous node to this node
-			if (previousNode != null) {
-				previousNode.next = newNode;
-			}
-			previousNode = newNode;
-		}
+		// Ensure that we generate at least one solution. If not, remove courses and try again, until we
+		// get down to the last course.
+		List<List<Class>> generatedSchedules;
+		while (true) {
 		
-		// Calculate the schedules
-		System.out.println("");
-		ChoiceNode firstNode = nodes.get(0);
-		List<List<Class>> generatedSchedules = firstNode.generateChoices();
+			// Create a choice node for every course in the group and add the appropriate classes to it
+			List<ChoiceNode> nodes = new ArrayList<ChoiceNode>();
+			ChoiceNode previousNode = null;
+			for (Course thisCourse : theGroup.courses) {
+				// Create the new node
+				ChoiceNode newNode = new ChoiceNode();
+				newNode.setAmount(1);	// choose one class
+				newNode.addChoices(thisCourse.classes);
+				
+				// Add it to our list
+				nodes.add(newNode);
+				
+				// Link the previous node to this node
+				if (previousNode != null) {
+					previousNode.next = newNode;
+				}
+				previousNode = newNode;
+			}
+			
+			// Calculate the schedules
+			System.out.println("");
+			ChoiceNode firstNode = nodes.get(0);
+			generatedSchedules = firstNode.generateChoices();
+			
+			if (generatedSchedules.size() == 0) {
+				// we didn't generate any solution
+				if (!theGroup.removeNewestCourse()) {
+					// if there aren't any courses left,
+					// removeNewwestCourse() returns false
+					// so there is nothing left to do
+					break;
+				}
+			} else {
+				// we generated at least one schedule
+				break;
+			}
+			
+		}
 		
 		// Add the schedules to our list
 		for (List<Class> schedule : generatedSchedules) {
