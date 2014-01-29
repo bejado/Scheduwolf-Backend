@@ -134,6 +134,20 @@ public class Schedule {
 		return meetingSet;
 	}
 	
+	/**
+	 * Returns true if there is at least one meeting on day.
+	 */
+	public boolean atLeastOneMeetingOnDay(byte day) {
+		// Go through each class in this schedule.
+		// If there are any meetings on day, then we know that there is at least one.
+		for (Class thisClass : classes) {
+			if (thisClass.meetingsOnDay(day).size() > 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public double averageStartTime() {
 		double runningTotal = 0.0;
 		int dayCount = 0;
@@ -165,5 +179,26 @@ public class Schedule {
 			}
 		}
 		return startTime;
+	}
+	
+	/**
+	 * Returns the number of days per week this Schedule contains classes.
+	 * @return int
+	 */
+	public int classDaysPerWeek() {
+		byte dateBit = 0x40;
+		int totalClassDays = 0;
+		
+		for (int day = 0; day < 7; day++) {
+			// Is there class on this day?
+			if (this.atLeastOneMeetingOnDay(dateBit)) {
+				totalClassDays++;
+			}
+			
+			// Go to the next date 
+			dateBit = (byte) (dateBit >> 1);
+		}
+		
+		return totalClassDays;
 	}
 }
