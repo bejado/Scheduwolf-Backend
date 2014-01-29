@@ -20,9 +20,6 @@ public class ScheduleComparator implements Comparator<Schedule> {
 	public int compare(Schedule o1, Schedule o2) {
 		int comparison = 0;
 		
-		return compareClassDaysPerWeek(o1, o2);
-		/*
-		
 		// If we haven't loaded any priorities, just return 0
 		if (priorities == null)
 			return comparison;
@@ -38,7 +35,6 @@ public class ScheduleComparator implements Comparator<Schedule> {
 		
 		// Return that comparison
 		return comparison;
-		*/
 	}
 	
 	private int compareForPriorityString(Schedule o1, Schedule o2, String priority) {
@@ -50,7 +46,9 @@ public class ScheduleComparator implements Comparator<Schedule> {
 			if (comparison == 0) {
 				comparison = compareAverageStartTime(o1, o2);
 			}
-		} else {
+		} else if (priority.equals("Days of class per week")) {
+			comparison = compareClassDaysPerWeek(o1, o2);
+		} else { // class time on day
 			comparison = compareClassTimeOnDay(o1, o2, Meeting.ALL_DAYS);
 		}
 		
