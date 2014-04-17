@@ -35,6 +35,7 @@ public class Section extends Object implements Choice {
 	String id;
 	String description;
 	String notes;
+	String location;
 	SectionType type = SectionType.LECTURE;
 	int spacesAvailable;
 	int numberRegistered;
@@ -86,6 +87,10 @@ public class Section extends Object implements Choice {
 		spacesAvailable = Integer.parseInt(section.getString("spaces_available"));
 		numberRegistered = Integer.parseInt(section.getString("number_registered"));
 		canceled = section.getString("canceled").toUpperCase() == "Y";
+		location = section.getString("location");
+		if (location.equals("{ }")) {
+			location = "TBA";
+		}
 		
 		try {
 			units = Double.parseDouble(section.getString("units"));
@@ -110,22 +115,24 @@ public class Section extends Object implements Choice {
 		try {
 			// There is more than one meeting
 			BasicDBList dayObject = (BasicDBList) section.get("day");
-			String day0 = (String) dayObject.get(0);
-			String day1 = (String) dayObject.get(1);
-			
-			BasicDBList startTimeObject = (BasicDBList) section.get("start_time");
-			String st0 = (String) startTimeObject.get(0);
-			String st1 = (String) startTimeObject.get(1);
-			
-			BasicDBList endTimeObject = (BasicDBList) section.get("end_time");
-			String et0 = (String) endTimeObject.get(0);
-			String et1 = (String) endTimeObject.get(1);
-			
-			Meeting meeting0 = new Meeting(day0, st0, et0);
-			Meeting meeting1 = new Meeting(day1, st1, et1);
-			
-			meetings.add(meeting0);
-			meetings.add(meeting1);
+			if (dayObject != null) {
+				String day0 = (String) dayObject.get(0);
+				String day1 = (String) dayObject.get(1);
+				
+				BasicDBList startTimeObject = (BasicDBList) section.get("start_time");
+				String st0 = (String) startTimeObject.get(0);
+				String st1 = (String) startTimeObject.get(1);
+				
+				BasicDBList endTimeObject = (BasicDBList) section.get("end_time");
+				String et0 = (String) endTimeObject.get(0);
+				String et1 = (String) endTimeObject.get(1);
+				
+				Meeting meeting0 = new Meeting(day0, st0, et0);
+				Meeting meeting1 = new Meeting(day1, st1, et1);
+				
+				meetings.add(meeting0);
+				meetings.add(meeting1);
+			}
 		} catch (java.lang.ClassCastException exception) {
 			Meeting firstMeeting = new Meeting(section.getString("day"),
 					   section.getString("start_time"),
@@ -141,7 +148,7 @@ public class Section extends Object implements Choice {
 	public Map<String, Object> serialize() {
 		Map<String, Object> sectionMap = new HashMap<String, Object>();
 		sectionMap.put("status", getAvailable() ? "Open" : "Closed");
-		sectionMap.put("location", "Cosmo's Apartment");
+		sectionMap.put("location", location);
 		
 		List<Map<String,Object>> meetingArray = new ArrayList<Map<String,Object>>();
 		for (Meeting thisMeeting : meetings) {
@@ -156,6 +163,7 @@ public class Section extends Object implements Choice {
 		sectionMap.put("sectionNumber", id);
 		sectionMap.put("type", serializeSectionType(type));
 		sectionMap.put("courseTitle", course.title);
+		sectionMap.put("id", course.getPrettyID());
 		return sectionMap;
 	}
 	
@@ -205,9 +213,10 @@ public class Section extends Object implements Choice {
 			return SectionType.DISCUSSION;
 		else if (sectionType.equals("lab"))
 			return SectionType.LAB;
-		else if (sectionType.equals("quiz"))
+		else if (sectionType.equals("qz"))
 			return SectionType.QUIZ;
 		
+		// should be lec-lab
 		return SectionType.LECTURELAB;
 	}
 	

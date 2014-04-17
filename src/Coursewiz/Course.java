@@ -28,9 +28,10 @@ public class Course extends Object implements Choice {
 	 * **********************************************/
 	
 	// Course-specific data
-	String title;
+	public String title;
 	String departmentAbbreviation;
 	int courseNumber;
+	String sequence;
 	String suffix;
 	String description;
 	double units;
@@ -57,6 +58,10 @@ public class Course extends Object implements Choice {
 	 * PUBLIC INTERFACE
 	 * **********************************************/
 	
+	public String getPrettyID() {
+		return departmentAbbreviation + " " + Integer.toString(courseNumber) + sequence;
+	}
+	
 	/**
 	 * Add a Section to this Course's list of sections. The order in which they are added does matter, depending on this
 	 * course's sectionLink type.
@@ -75,6 +80,10 @@ public class Course extends Object implements Choice {
 		title = courseDB.getString("title");
 		departmentAbbreviation = courseDB.getString("prefix");
 		courseNumber = Integer.parseInt(courseDB.getString("number"));
+		sequence = courseDB.getString("sequence");
+		if (sequence.contains("{")) {
+			sequence = "";
+		}
 		suffix = courseDB.getString("suffix");
 		description = courseDB.getString("description");
 
@@ -118,6 +127,13 @@ public class Course extends Object implements Choice {
 	/* **********************************************
 	 * SETTERS / GETTERS
 	 * **********************************************/
+	
+	/*
+	 * Returns the total number of generated Classes.
+	 */
+	public int getNumberOfClasses() {
+		return classes.size();
+	}
 	
 	/**
 	 * Returns the generated classes. Empty until calculateClasses() has been called.

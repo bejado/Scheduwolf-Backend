@@ -70,61 +70,52 @@ public class ScheduleSolver {
 	 * Generates potential schedules that all work and populates the schedules of this solver.
 	 * Retrieve the schedules via getSchedules()
 	 */
-	public void solve() {
+	public boolean solve() {
 		
 		List<Schedule> schedules = new ArrayList<Schedule>();
 
 		// This is the big solve!
 		if (courseGroups.size() == 0) {
-			return;
+			return false;
 		}
 		
 		// For now, we'll just use the first course group
 		// TODO obviously, we need to update this
 		CourseGroup theGroup = courseGroups.get(0);
 		
-		// Ensure that we generate at least one solution. If not, remove courses and try again, until we
-		// get down to the last course.
-		List<List<Class>> generatedSchedules;
-		while (true) {
+		// If there aren't any courses, error out
+		if (theGroup.courses.size() == 0) {
+			return false;
+		}
 		
-			// Create a choice node for every course in the group and add the appropriate classes to it
-			List<ChoiceNode> nodes = new ArrayList<ChoiceNode>();
-			ChoiceNode previousNode = null;
-			for (Course thisCourse : theGroup.courses) {
-				// Create the new node
-				ChoiceNode newNode = new ChoiceNode();
-				newNode.setAmount(1);	// choose one class
-				newNode.addChoices(thisCourse.classes);
-				
-				// Add it to our list
-				nodes.add(newNode);
-				
-				// Link the previous node to this node
-				if (previousNode != null) {
-					previousNode.next = newNode;
-				}
-				previousNode = newNode;
+		// If we can't generate at least one solution, switch to an error state
+		List<List<Class>> generatedSchedules;
+		
+		// Create a choice node for every course in the group and add the appropriate classes to it
+		List<ChoiceNode> nodes = new ArrayList<ChoiceNode>();
+		ChoiceNode previousNode = null;
+		for (Course thisCourse : theGroup.courses) {
+			// Create the new node
+			ChoiceNode newNode = new ChoiceNode();
+			newNode.setAmount(1);	// choose one class
+			newNode.addChoices(thisCourse.classes);
+			
+			// Add it to our list
+			nodes.add(newNode);
+			
+			// Link the previous node to this node
+			if (previousNode != null) {
+				previousNode.next = newNode;
 			}
-			
-			// Calculate the schedules
-			System.out.println("");
-			ChoiceNode firstNode = nodes.get(0);
-			generatedSchedules = firstNode.generateChoices();
-			
-			if (generatedSchedules.size() == 0) {
-				// we didn't generate any solution
-				if (!theGroup.removeNewestCourse()) {
-					// if there aren't any courses left,
-					// removeNewwestCourse() returns false
-					// so there is nothing left to do
-					break;
-				}
-			} else {
-				// we generated at least one schedule
-				break;
-			}
-			
+			previousNode = newNode;
+		}
+		
+		// Calculate the schedules
+		ChoiceNode firstNode = nodes.get(0);
+		generatedSchedules = firstNode.generateChoices();
+		
+		if (generatedSchedules.size() == 0) {
+			return false;
 		}
 		
 		// Add the schedules to our list
@@ -140,6 +131,7 @@ public class ScheduleSolver {
 		
 		solution = new Solution(schedules);
 		
+		return true;
 	}
 	
 	/* **********************************************

@@ -50,14 +50,18 @@ public class schedule extends HttpServlet {
 	static Gson gson = new Gson();
 	
 	public static class CourseParser {
-		public String departmentAbbreviation;
-		public int number;
-		public String suffix;
+		public String departmentAbbreviation = "";
+		public int number = 0;
+		public String suffix = "";
 		
 		public CourseParser(String rawCourseString) {
 			rawCourseString = removeWhitespace(rawCourseString);
 			departmentAbbreviation = removeNonLetters(rawCourseString).toUpperCase();
 			number = Integer.parseInt(removeNonNumbers(rawCourseString));
+		}
+		
+		public String getPrettyName() {
+			return departmentAbbreviation + " " + Integer.toString(number) + suffix;
 		}
 		
 		String removeWhitespace(String testString) {
@@ -113,6 +117,10 @@ public class schedule extends HttpServlet {
 			return;
 		}
 		
+		// Set up our writer to output data to the client
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/json");
+		
 		// Parse the returned JSON data
 		Type listType = new TypeToken<List<String>>() {}.getType();
 		List<String> coursesList = gson.fromJson(coursesJSON, listType);
@@ -134,6 +142,9 @@ public class schedule extends HttpServlet {
 		ScheduleSolver solver = new ScheduleSolver();
 		solver.setPriorities(prioritiesList);
 		
+		// A list to store the Courses that have no classes
+		List<String> noClasses = new ArrayList<String>();
+		
 		// Create a course for each of the courses given and add it to the course group
 		CourseGroup group = solver.new CourseGroup();
 		for (String thisCourseString : coursesList) {
@@ -143,6 +154,11 @@ public class schedule extends HttpServlet {
 			
 			// Load the course information from our Mongo database
 			BasicDBObject courseDB = loadCourseFromMongo(parser.departmentAbbreviation, parser.number);
+			if (courseDB == null) {
+				response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+				out.println(parser.getPrettyName());
+				return;
+			}
 			newCourse.loadFromDatabase(courseDB);
 			
 			// Calculate its potential classes
@@ -151,17 +167,32 @@ public class schedule extends HttpServlet {
 			// Remove unavailable sections
 			newCourse.filterSections(excludeSectionsList);
 			
-			group.addCourse(newCourse);
+			// If there aren't any classes, add it to the list but not the course group
+			if (newCourse.getNumberOfClasses() == 0) {
+				noClasses.add(newCourse.title);
+			} else {
+				group.addCourse(newCourse);
+			}
+		}
+		
+		// If there's a Course with no classes, error out
+		if (noClasses.size() > 0) {
+			response.setStatus(HttpServletResponse.SC_CONFLICT);
+			out.println(gson.toJson(noClasses));
+			return;
 		}
 		
 		// Solve!
 		solver.addCourseGroup(group);
-		solver.solve();
+		boolean result = solver.solve();
 		Solution solution = solver.getSolution();
 		
-		// Set up our writer to output data to the client
-		response.setContentType("text/json");
-		PrintWriter out = response.getWriter();
+		// If we failed to generate a solution
+		if (!result) {
+			response.sendError(HttpServletResponse.SC_EXPECTATION_FAILED);
+			//out.print("{'Error': 'Not possible'}");
+			return;
+		}
 		
 		Gson gsonBuilder = new GsonBuilder().setPrettyPrinting().serializeNulls().setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE).create();
 		out.print(gson.toJson(solution.serialize()));
@@ -177,10 +208,11 @@ public class schedule extends HttpServlet {
 	
 	public static BasicDBObject loadCourseFromMongo(String departmentAbb, int courseNumber) throws IOException {
 		// Load the correct department from MongoDB
-		BasicDBObject department = null;
-		department = findDepartmentInDatabase(departmentAbb);
+		//BasicDBObject department = null;
+		//department = findDepartmentInDatabase(departmentAbb);
 		
 		// If we couldn't find the department, we should try loading it
+		/*
 		if (department == null) {
 			refreshMongoForDepartment(departmentAbb);
 			department = findDepartmentInDatabase(departmentAbb);
@@ -204,8 +236,24 @@ public class schedule extends HttpServlet {
 				break;
 			}
 		}
+		*/
+		DB db = mongoClient.getDB("Scheduwolf_overhall");
+		DBCollection collection = db.getCollection("Courses");
 		
-		return foundCourse;
+		// Form a query to find the correct course
+		BasicDBObject andQuery = new BasicDBObject();
+		List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
+		obj.add(new BasicDBObject("prefix", departmentAbb));
+		obj.add(new BasicDBObject("number", Integer.toString(courseNumber)));
+		andQuery.put("$and", obj);
+		
+		DBCursor cursor = collection.find(andQuery);
+		List<DBObject> results = cursor.toArray();
+		BasicDBObject course = null;
+		if (results.size() > 0) {
+			course = (BasicDBObject) results.get(0);
+		}
+		return course;
 	}
 	
 	public static void refreshMongoForDepartment(String department) throws IOException {
