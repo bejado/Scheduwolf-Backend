@@ -161,6 +161,9 @@ public class schedule extends HttpServlet {
 			}
 			newCourse.loadFromDatabase(courseDB);
 			
+			// Tally that someone searched for the course
+			updateCourseCount(parser.departmentAbbreviation, parser.number);
+			
 			// Calculate its potential classes
 			newCourse.calculateClasses();
 			
@@ -224,6 +227,19 @@ public class schedule extends HttpServlet {
 			course = (BasicDBObject) results.get(0);
 		}
 		return course;
+	}
+	
+	public static void updateCourseCount(String departmentAbb, int courseNumber) {
+		DB db = mongoClient.getDB("Scheduwolf_overhall");
+		DBCollection collection = db.getCollection("CourseSearchCount");
+		
+		BasicDBObject query = new BasicDBObject();
+		query.put("_id", departmentAbb + Integer.toString(courseNumber));
+		
+		BasicDBObject obj = new BasicDBObject();
+		obj.put("$inc", new BasicDBObject("count", 1));
+		
+		collection.update(query, obj, true, false);
 	}
 	
 	public static void refreshMongoForDepartment(String department) throws IOException {
