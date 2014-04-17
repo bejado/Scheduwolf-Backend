@@ -207,36 +207,6 @@ public class schedule extends HttpServlet {
 	}
 	
 	public static BasicDBObject loadCourseFromMongo(String departmentAbb, int courseNumber) throws IOException {
-		// Load the correct department from MongoDB
-		//BasicDBObject department = null;
-		//department = findDepartmentInDatabase(departmentAbb);
-		
-		// If we couldn't find the department, we should try loading it
-		/*
-		if (department == null) {
-			refreshMongoForDepartment(departmentAbb);
-			department = findDepartmentInDatabase(departmentAbb);
-			if (department == null) {
-				return null;
-			}
-		}
-		
-		// Get the list of courses
-		BasicDBObject offeredCourses = (BasicDBObject) department.get("OfferedCourses");
-		BasicDBList courses = (BasicDBList) offeredCourses.get("course");
-		
-		// Find the correct course
-		BasicDBObject foundCourse = null;
-		for (Object courseObject : courses) {
-			BasicDBObject thisCourse = (BasicDBObject) courseObject;
-			BasicDBObject courseData = (BasicDBObject) thisCourse.get("CourseData");
-			String number = courseData.getString("number");
-			if (Integer.parseInt(number) == courseNumber) {
-				foundCourse = courseData;
-				break;
-			}
-		}
-		*/
 		DB db = mongoClient.getDB("Scheduwolf_overhall");
 		DBCollection collection = db.getCollection("Courses");
 		
